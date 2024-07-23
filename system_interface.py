@@ -44,7 +44,7 @@ from carla_birdeye_view import (
 from carla_birdeye_view.mask import PixelDimensions
 
 STUCK_SPEED_THRESHOLD_IN_KMH = 3
-MAX_STUCK_FRAMES = 30
+MAX_STUCK_FRAMES = 500000
 
 
 def get_speed(actor: carla.Actor) -> float:
@@ -84,7 +84,13 @@ def main():
 
     while True:
         # world.tick()
+        
+        # Create the bird's eye view frame
         birdview: BirdView = birdview_producer.produce(agent_vehicle=agent)
+        
+        # Create the speedometer view frame
+        
+        
         bgr = cv.cvtColor(BirdViewProducer.as_rgb(birdview), cv.COLOR_BGR2RGB)
         # NOTE imshow requires BGR color model
         cv.imshow("BirdView RGB", bgr)
@@ -97,6 +103,7 @@ def main():
 
         if stuck_frames_count == MAX_STUCK_FRAMES:
             agent.set_autopilot(False)
+            print('STUCK FRAMES')
             agent.set_transform(random.choice(spawn_points))
             agent.set_autopilot(True)
 
