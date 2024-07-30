@@ -1,0 +1,12 @@
+shapely
+numpy
+carla
+sklearn
+shap
+pickle
+networkx
+gtts
+pygame
+pyttsx3
+playsound
+pygobject
