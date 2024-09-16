@@ -15,10 +15,11 @@ from datetime import datetime
 
 from commentary.commentary_controller import ComentaryController
 
-from examples.DReyeVR_utils import DReyeVRSensor
+# from examples.DReyeVR_utils import DReyeVRSensor
 
 def start_server():
-    cmd = "c:\\Applications\\code\\carla\\Build\\UE4Carla\\0.9.13-dirty\\WindowsNoEditor\\CarlaUE4.exe -vr"
+    # TODO: ADD BACK -VR TO THIS
+    cmd = "c:\\Applications\\ben_code\\carla\\Build\\UE4Carla\\0.9.13-dirty\\WindowsNoEditor\\CarlaUE4.exe"
     #os.system(cmd)
     #time.sleep(5)
     subprocess.call(cmd, shell=False)
@@ -73,10 +74,11 @@ def main():
         type=int,
         help='minimum distance limit of planned route, default is 100 meters ')
 
+    # TODO: ADD BACK TOWN10HD
     argparser.add_argument(
         '-t', '--town',
-        metavar='Town10HD',
-        default="Town10HD",
+        metavar='Town04',
+        default="Town04",
         help='number of vehicles (default: 10)')
 
     argparser.add_argument(
@@ -151,7 +153,8 @@ def main():
         #world = client.get_world()
         #actor_list, spawn_points = spawn_actors(args, client, world)
 
-        world = client.load_world("Town10HD")
+        # TODO: CHANGE BACK TO TOWN10HD
+        world = client.load_world("Town04")
         ego_actor = None
         
         #actor_list, spawn_points = spawn_actors(args, client, world)
@@ -177,36 +180,40 @@ def main():
         # blueprint_library = world.get_blueprint_library()
         # tesla_model3 = blueprint_library.filter('Volkswagen')[1]
         # print(tesla_model3)
-        commentary_controller = ComentaryController(world, _map, [], args)
-        log_name = args.logname.split('.')[0]
-        dated_name = "c:/applications/code/userstudy/logs/userdata/" + log_name + "_" + datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p") + ".txt"
-        f = open(dated_name, "w")
-        f.write("")
-        f.close()
+
+        # TODO: ADD BACK
+        # commentary_controller = ComentaryController(world, _map, [], args)
+        # log_name = args.logname.split('.')[0]
+        # dated_name = "c:/applications/code/userstudy/logs/userdata/" + log_name + "_" + datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p") + ".txt"
+        # f = open(dated_name, "w")
+        # f.write("")
+        # f.close()
         #This tick procedure can also be implemented in a while loop with a delay.
         #world.wait_for_tick()
 
-        sensor = DReyeVRSensor(world)
+        # sensor = DReyeVRSensor(world)
         #generate_traffic.main(walker=15)
-        if  args.logname == "":
-            print("Error! Record log is not provided!")
-            try:
-                sys.exit(0)
-            except SystemExit:
-                os._exit(0)
-        file_dir = 'c:/applications/code/study_scenarios/latest/final/' + args.logname
-        #print(file_dir)
-        sim_start_time = 0
-        duration = 0
-        if args.logname == 'general_log_new.log':
-            sim_start_time = 0
-            duration = 213
-        elif args.logname == 'error_log_new.log':
-            sim_start_time = 0
-            duration = 256
-        elif args.logname == 'specific_log_new.log':
-            sim_start_time = 0
-            duration = 272
+
+        # TODO: ADD BACK
+        # if  args.logname == "":
+        #     print("Error! Record log is not provided!")
+        #     try:
+        #         sys.exit(0)
+        #     except SystemExit:
+        #         os._exit(0)
+        # file_dir = 'c:/applications/code/study_scenarios/latest/final/' + args.logname
+        # #print(file_dir)
+        # sim_start_time = 0
+        # duration = 0
+        # if args.logname == 'general_log_new.log':
+        #     sim_start_time = 0
+        #     duration = 213
+        # elif args.logname == 'error_log_new.log':
+        #     sim_start_time = 0
+        #     duration = 256
+        # elif args.logname == 'specific_log_new.log':
+        #     sim_start_time = 0
+        #     duration = 272
 
         # # set the time factor for the replayer
         # client.set_replayer_time_factor(args.time_factor)
@@ -216,8 +223,9 @@ def main():
 
         # replay the session
 
-        client.replay_file(file_dir, sim_start_time, duration, 0)
-        commentary_controller.get_data(sensor, dated_name, args)
+        # TODO: ADD BACK
+        #client.replay_file(file_dir, sim_start_time, duration, 0)
+        # commentary_controller.get_data(sensor, dated_name, args)
 
     except KeyboardInterrupt:
         print("\nCancelled by user. Bye!")
