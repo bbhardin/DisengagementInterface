@@ -1,0 +1,10 @@
+<route id="1" map="Town03">
+    <waypoint pitch="0.0" roll="0.0" x="8630.0" y="4110.0" yaw="0.0" z="40.0" /> <!-- Driveway start waypoint -->
+    <waypoint pitch="0.0" roll="0.0" x="1700.0" y="12680.0" yaw="0.0" z="0.0" /> <!-- 1 -->
+    <waypoint pitch="0.0" roll="0.0" x="21130.0" y="6250.0" yaw="0.0" z="0.0" /> <!-- 2 -->
+    <waypoint pitch="0.0" roll="0.0" x="492.6" y="4057.8" yaw="0.0" z="0.0" /> <!-- 3 -->
+    <waypoint pitch="0.0" roll="0.0" x="8630.0" y="4110.0" yaw="0.0" z="40.0" /> <!-- Driveway end waypoint -->
+</route>
+
+
+<!-- python scenario_runner.py \-\- route <route_file_path <scenarios_file_path> <route_name> \-\-agent <agent_file py> -->

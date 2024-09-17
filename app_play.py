@@ -8,7 +8,7 @@ import threading
 import time
 
 
-#from agents.navigation.global_route_planner import GlobalRoutePlanner
+from agents.navigation.global_route_planner import GlobalRoutePlanner
 #from agents.navigation import generate_traffic
 
 from commentary.commentary_controller import ComentaryController
@@ -160,6 +160,14 @@ def main():
         # ego_actor = None
 
         _map = world.get_map()
+
+        global_planner = GlobalRoutePlanner(_map, sampling_resolution)
+        actor_list = world.get_actors()
+
+        #Get the global  route from ego's current position to a chosen destination
+        global_route, global_route_cmd, route_list = global_planner.trace_route(ego_origin, ego_destination)
+
+        # TODO: Create the commentary controller here
 
         thread2 = threading.Thread(target=generate_traffic)
         thread2.start()
