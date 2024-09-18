@@ -1,0 +1,20 @@
+{
+    "scenario_name": "Town03DisengageScenario",
+    "type": "FollowLeadingVehicle",
+    "town": "Town03",
+    "ego_vehicles": [
+        {
+            "model": "harplab.dreyevr_vehicle.teslam3",
+            "transform": {
+                "location": {"x": 0, "y": 0, "z": 0},
+                "rotation": {"pitch": 0, "yaw": 0, "roll": 0}
+            },
+            "rolename": "hero"
+        }
+    ],
+    "trigger_points": [
+        {
+            "location": {"x": 0, "y": 0, "z": 0}
+        }
+    ]
+}

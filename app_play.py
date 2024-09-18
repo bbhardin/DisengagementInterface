@@ -9,6 +9,7 @@ import time
 
 
 from agents.navigation.global_route_planner import GlobalRoutePlanner
+from disengagement_scenarios.town03_disengage_scenario import NearWarningScenario
 #from agents.navigation import generate_traffic
 
 from commentary.commentary_controller import ComentaryController
@@ -157,17 +158,23 @@ def main():
         print("listening to server %s:%s", args.host, args.port)
 
         world = client.load_world("Town03")
-        # ego_actor = None
+        actor_list = world.get_actors()
+        ego_actor = actor_list.filter("harplab.dreyevr_vehicle.teslam3")
+
+        # for actor in actor_list:
+        #     print("ego actor %s", actor)
+        # return
 
         _map = world.get_map()
 
-        global_planner = GlobalRoutePlanner(_map, sampling_resolution)
-        actor_list = world.get_actors()
+
+        NearWarningScenario.run_scenario(_map, world, ego_actor[0])
+        #global_planner = GlobalRoutePlanner(_map, sampling_resolution)
 
         #Get the global  route from ego's current position to a chosen destination
-        global_route, global_route_cmd, route_list = global_planner.trace_route(ego_origin, ego_destination)
+        #global_route, global_route_cmd, route_list = global_planner.trace_route(ego_origin, ego_destination)
 
-        # TODO: Create the commentary controller here
+        
 
         thread2 = threading.Thread(target=generate_traffic)
         thread2.start()
