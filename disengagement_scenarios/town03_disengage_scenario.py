@@ -29,20 +29,41 @@ class NearWarningScenario():
         sampling_resolution = 2
         grp = GlobalRoutePlanner(town_map, sampling_resolution) # maybe world should be town_map
 
-        home_location = carla.Location(x=8630.0, y=4110.0, z=1.0)
-        #test_location = carla.Location(x=0, y=0, z=10)
-        location_1 = carla.Location(x=1700.0, y=12680.0, z=0.0)
 
-        home_transform = carla.Transform(location=home_location, rotation=carla.Rotation())
+        # Todo: abstract some of this to the parent caller so that I don't have to repeat code
+        #       for every scenario. Can pass the spawn point to run_scenario method for instance
+
+        # Go to VehicleSpawnPoint157
+        spawn_points = town_map.get_spawn_points()
+        # Spawn points are literally just transforms. They have no names.
+        # # home_location = None
+        for index, point in enumerate(spawn_points):
+            print("spawn point %s", spawn_points[index])
+            # if (point.id == "VehicleSpawnPoint157"):
+            #     home_location = point.location
+
+        # TODO: Add some error checking here?
+        #_location = spawn_points[157]
+        # print("spawn point %s", home_location)
+        driveway_location = carla.Location(x=87.365, y=-40.179, z=0.278)
+        #home_location = town_map.transform_to_geolocation(home_location)
+        #test_location = carla.Location(x=0, y=0, z=10)
+        #start_location = carla.Location()
+        spawn_point_157 = carla.Location(x=102.849, y=66.711, z=10.0)
+        location_1 = carla.Location(x=-145.426, y=66.575, z=0.02)
+        location_2 = carla.Location(x=-18.796, y=130.234, z=0.02)
+        location_3 =carla.Location(x=-4.988, y=46.7459, z=0.02)
+
+        #home_transform = carla.Transform(location=home_location, rotation=carla.Rotation())
         # point_2 = carla.Location()
 
-        route = grp.trace_route(home_location, location_1)
+        route = grp.trace_route(spawn_point_157, location_1)
 
         print("about to spawn the ego vehicle at home")
         ego_bp = world.get_blueprint_library().find('harplab.dreyevr_vehicle.teslam3')
         
         SpawnActor = carla.command.SpawnActor
-        ego_vehicle.set_location(home_location)
+        ego_vehicle.set_location(spawn_point_157)
         #ego_vehicle.destroy()
         #ego_vehicle = SpawnActor(ego_bp, home_transform)
 
