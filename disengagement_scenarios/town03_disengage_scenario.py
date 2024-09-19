@@ -28,6 +28,7 @@ class NearWarningScenario():
         print("setting up the scenario and path to follow!")
         sampling_resolution = 2
         grp = GlobalRoutePlanner(town_map, sampling_resolution) # maybe world should be town_map
+        #grp.setup()
 
 
         # Todo: abstract some of this to the parent caller so that I don't have to repeat code
@@ -49,7 +50,8 @@ class NearWarningScenario():
         #home_location = town_map.transform_to_geolocation(home_location)
         #test_location = carla.Location(x=0, y=0, z=10)
         #start_location = carla.Location()
-        spawn_point_157 = carla.Location(x=102.849, y=66.711, z=10.0)
+        spawn_point_157 = carla.Location(x=102.849, y=66.711, z=1.0)
+        spawn_point_17 = carla.Location(x=102.849, y=66.711, z=0.02)
         location_1 = carla.Location(x=-145.426, y=66.575, z=0.02)
         location_2 = carla.Location(x=-18.796, y=130.234, z=0.02)
         location_3 =carla.Location(x=-4.988, y=46.7459, z=0.02)
@@ -57,20 +59,26 @@ class NearWarningScenario():
         #home_transform = carla.Transform(location=home_location, rotation=carla.Rotation())
         # point_2 = carla.Location()
 
-        route = grp.trace_route(spawn_point_157, location_1)
 
         print("about to spawn the ego vehicle at home")
-        ego_bp = world.get_blueprint_library().find('harplab.dreyevr_vehicle.teslam3')
+        # ego_bp = world.get_blueprint_library().find('harplab.dreyevr_vehicle.teslam3')
         
-        SpawnActor = carla.command.SpawnActor
+        # SpawnActor = carla.command.SpawnActor
         ego_vehicle.set_location(spawn_point_157)
         #ego_vehicle.destroy()
         #ego_vehicle = SpawnActor(ego_bp, home_transform)
 
-        # for waypoint in route:
-        #     world.debug.draw_string(waypoint[0].transform.location, '^', draw_shadow=False,
-        #                             color=carla.Color(r=0, g=0, b=255), life_time=120.0,
-        #                             presistent_lines=True)
+        route = grp.trace_route(spawn_point_17, location_1)
+        waypoint_list = []
+        for waypoint in range(len(route[0])):
+            print("idk any more  %s ", route[0][waypoint][0])
+            waypoint_list.append(route[0][waypoint][0])
+
+        for waypoint in waypoint_list:
+            print("drawing %s", waypoint.transform.location)
+            world.debug.draw_string(waypoint.transform.location, '^', draw_shadow=False,
+                                    color=carla.Color(r=0, g=0, b=255), life_time=120.0,
+                                    persistent_lines=True)
 
 
 
