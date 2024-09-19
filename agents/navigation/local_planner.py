@@ -177,6 +177,7 @@ class LocalPlanner(object):
                     road_option)]
 
             self._waypoints_queue.append((next_waypoint, road_option))
+            
 
     def set_global_plan(self, current_plan, stop_waypoint_creation=True, clean_queue=True):
         """

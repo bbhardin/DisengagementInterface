@@ -10,6 +10,7 @@ It can also make use of the global route planner to follow a specifed route
 """
 
 import carla
+from enum import Enum
 from shapely.geometry import Polygon
 
 from agents.navigation.local_planner import LocalPlanner
@@ -248,8 +249,7 @@ class BasicAgent(object):
 
         return (False, None)
 
-
-    def _vehicle_obstacle_detected(self, world, ego_vehicle, vehicle_list=None, lane_offset=0):
+    def _vehicle_obstacle_detected(self, vehicle_list=None, max_distance=None, up_angle_th=90, low_angle_th=0, lane_offset=0):
         """
         Method to check if there is a vehicle in front of the agent blocking its path.
 
@@ -258,27 +258,34 @@ class BasicAgent(object):
             :param max_distance: max freespace to check for obstacles.
                 If None, the base threshold value is used
         """
+        if self._ignore_vehicles:
+            return (False, None, -1)
 
-        lane_type = 'Unknown'
         if not vehicle_list:
-            print("Actor list is empty")
-            return None
+            vehicle_list = self._world.get_actors().filter("*vehicle*")
 
-        ego_wpt = world.get_map().get_waypoint(ego_vehicle.get_location())
+        if not max_distance:
+            max_distance = self._base_vehicle_threshold
+
+        ego_transform = self._vehicle.get_transform()
+        ego_wpt = self._map.get_waypoint(self._vehicle.get_location())
 
         # Get the right offset
         if ego_wpt.lane_id < 0 and lane_offset != 0:
             lane_offset *= -1
 
-        ego_transform = ego_vehicle.get_transform()
-
-        #ego_local_planner = LocalPlanner(ego_vehicle)
-        target_transform = vehicle_list[0].get_transform()
-        target_wpt = world.get_map().get_waypoint(target_transform.location, lane_type=carla.LaneType.Any)
+        # Get the transform of the front of the ego
+        ego_forward_vector = ego_transform.get_forward_vector()
+        ego_extent = self._vehicle.bounding_box.extent.x
+        ego_front_transform = ego_transform
+        ego_front_transform.location += carla.Location(
+            x=ego_extent * ego_forward_vector.x,
+            y=ego_extent * ego_forward_vector.y,
+        )
 
         for target_vehicle in vehicle_list:
             target_transform = target_vehicle.get_transform()
-            target_wpt = world.get_map().get_waypoint(target_transform.location, lane_type=carla.LaneType.Any)
+            target_wpt = self._map.get_waypoint(target_transform.location, lane_type=carla.LaneType.Any)
 
             # Simplified version for outside junctions
             if not ego_wpt.is_junction or not target_wpt.is_junction:
@@ -288,20 +295,24 @@ class BasicAgent(object):
                     if not next_wpt:
                         continue
                     if target_wpt.road_id != next_wpt.road_id or target_wpt.lane_id != next_wpt.lane_id  + lane_offset:
-                        if target_wpt.lane_id * next_wpt.lane_id < 0:
-                            lane_type = 'IncomLane'
-                        else:
-                            lane_type = 'OutgoLane'
                         continue
-                    
-                lane_type = "VehLane"
-                return True, lane_type, compute_distance(target_transform.location, ego_transform.location)
+
+                target_forward_vector = target_transform.get_forward_vector()
+                target_extent = target_vehicle.bounding_box.extent.x
+                target_rear_transform = target_transform
+                target_rear_transform.location -= carla.Location(
+                    x=target_extent * target_forward_vector.x,
+                    y=target_extent * target_forward_vector.y,
+                )
+
+                if is_within_distance(target_rear_transform, ego_front_transform, max_distance, [low_angle_th, up_angle_th]):
+                    return (True, target_vehicle, compute_distance(target_transform.location, ego_transform.location))
 
             # Waypoints aren't reliable, check the proximity of the vehicle to the route
             else:
                 route_bb = []
                 ego_location = ego_transform.location
-                extent_y = ego_vehicle.bounding_box.extent.y
+                extent_y = self._vehicle.bounding_box.extent.y
                 r_vec = ego_transform.get_right_vector()
                 p1 = ego_location + carla.Location(extent_y * r_vec.x, extent_y * r_vec.y)
                 p2 = ego_location + carla.Location(-extent_y * r_vec.x, -extent_y * r_vec.y)
@@ -309,8 +320,8 @@ class BasicAgent(object):
                 route_bb.append([p2.x, p2.y, p2.z])
 
                 for wp, _ in self._local_planner.get_plan():
-                    # if ego_location.distance(wp.transform.location) > max_distance:
-                    #     break
+                    if ego_location.distance(wp.transform.location) > max_distance:
+                        break
 
                     r_vec = wp.transform.get_right_vector()
                     p1 = wp.transform.location + carla.Location(extent_y * r_vec.x, extent_y * r_vec.y)
@@ -320,22 +331,16 @@ class BasicAgent(object):
 
                 if len(route_bb) < 3:
                     # 2 points don't create a polygon, nothing to check
-                    if target_wpt.lane_id * ego_wpt.lane_id < 0:
-                        lane_type = 'IncomLane'
-                    elif target_wpt.lane_id == ego_wpt.lane_id:
-                        lane_type = 'VehLane'
-                    else:
-                        lane_type = 'OutgoLane'
-                    return False, lane_type, compute_distance(target_transform.location, ego_transform.location)
+                    return (False, None, -1)
                 ego_polygon = Polygon(route_bb)
 
                 # Compare the two polygons
                 for target_vehicle in vehicle_list:
                     target_extent = target_vehicle.bounding_box.extent.x
-                    if target_vehicle.id == ego_vehicle.id:
+                    if target_vehicle.id == self._vehicle.id:
                         continue
-                    # if ego_location.distance(target_vehicle.get_location()) > max_distance:
-                    #     continue
+                    if ego_location.distance(target_vehicle.get_location()) > max_distance:
+                        continue
 
                     target_bb = target_vehicle.bounding_box
                     target_vertices = target_bb.get_world_vertices(target_vehicle.get_transform())
@@ -343,130 +348,8 @@ class BasicAgent(object):
                     target_polygon = Polygon(target_list)
 
                     if ego_polygon.intersects(target_polygon):
-                        lane_type = 'VehLane'
-                        return True, lane_type, compute_distance(target_transform.location, ego_transform.location)
-                
-                if target_wpt.lane_id * ego_wpt.lane_id < 0:
-                    lane_type = 'IncomLane'
-                else:
-                    lane_type = 'OutgoLane'
-                return False, lane_type, compute_distance(target_transform.location, ego_transform.location)
+                        return (True, target_vehicle, compute_distance(target_vehicle.get_location(), ego_location))
 
+                return (False, None, -1)
 
-        if target_wpt.lane_id * ego_wpt.lane_id < 0:
-            lane_type = 'IncomLane'
-        elif target_wpt.lane_id == ego_wpt.lane_id:
-            lane_type = 'VehLane'
-        else:
-            lane_type = 'OutgoLane'
-
-        return False, lane_type, compute_distance(target_transform.location, ego_transform.location)
-
-
-
-
-    #ORIGINAL CARLA CODE VERSION
-    # def _vehicle_obstacle_detected(self, vehicle_list=None, max_distance=None, up_angle_th=90, low_angle_th=0, lane_offset=0):
-    #     """
-    #     Method to check if there is a vehicle in front of the agent blocking its path.
-
-    #         :param vehicle_list (list of carla.Vehicle): list contatining vehicle objects.
-    #             If None, all vehicle in the scene are used
-    #         :param max_distance: max freespace to check for obstacles.
-    #             If None, the base threshold value is used
-    #     """
-    #     if self._ignore_vehicles:
-    #         return (False, None, -1)
-
-    #     if not vehicle_list:
-    #         vehicle_list = self._world.get_actors().filter("*vehicle*")
-
-    #     if not max_distance:
-    #         max_distance = self._base_vehicle_threshold
-
-    #     ego_transform = self._vehicle.get_transform()
-    #     ego_wpt = self._map.get_waypoint(self._vehicle.get_location())
-
-    #     # Get the right offset
-    #     if ego_wpt.lane_id < 0 and lane_offset != 0:
-    #         lane_offset *= -1
-
-    #     # Get the transform of the front of the ego
-    #     ego_forward_vector = ego_transform.get_forward_vector()
-    #     ego_extent = self._vehicle.bounding_box.extent.x
-    #     ego_front_transform = ego_transform
-    #     ego_front_transform.location += carla.Location(
-    #         x=ego_extent * ego_forward_vector.x,
-    #         y=ego_extent * ego_forward_vector.y,
-    #     )
-
-    #     for target_vehicle in vehicle_list:
-    #         target_transform = target_vehicle.get_transform()
-    #         target_wpt = self._map.get_waypoint(target_transform.location, lane_type=carla.LaneType.Any)
-
-    #         # Simplified version for outside junctions
-    #         if not ego_wpt.is_junction or not target_wpt.is_junction:
-
-    #             if target_wpt.road_id != ego_wpt.road_id or target_wpt.lane_id != ego_wpt.lane_id  + lane_offset:
-    #                 next_wpt = self._local_planner.get_incoming_waypoint_and_direction(steps=3)[0]
-    #                 if not next_wpt:
-    #                     continue
-    #                 if target_wpt.road_id != next_wpt.road_id or target_wpt.lane_id != next_wpt.lane_id  + lane_offset:
-    #                     continue
-
-    #             target_forward_vector = target_transform.get_forward_vector()
-    #             target_extent = target_vehicle.bounding_box.extent.x
-    #             target_rear_transform = target_transform
-    #             target_rear_transform.location -= carla.Location(
-    #                 x=target_extent * target_forward_vector.x,
-    #                 y=target_extent * target_forward_vector.y,
-    #             )
-
-    #             if is_within_distance(target_rear_transform, ego_front_transform, max_distance, [low_angle_th, up_angle_th]):
-    #                 return (True, target_vehicle, compute_distance(target_transform.location, ego_transform.location))
-
-    #         # Waypoints aren't reliable, check the proximity of the vehicle to the route
-    #         else:
-    #             route_bb = []
-    #             ego_location = ego_transform.location
-    #             extent_y = self._vehicle.bounding_box.extent.y
-    #             r_vec = ego_transform.get_right_vector()
-    #             p1 = ego_location + carla.Location(extent_y * r_vec.x, extent_y * r_vec.y)
-    #             p2 = ego_location + carla.Location(-extent_y * r_vec.x, -extent_y * r_vec.y)
-    #             route_bb.append([p1.x, p1.y, p1.z])
-    #             route_bb.append([p2.x, p2.y, p2.z])
-
-    #             for wp, _ in self._local_planner.get_plan():
-    #                 if ego_location.distance(wp.transform.location) > max_distance:
-    #                     break
-
-    #                 r_vec = wp.transform.get_right_vector()
-    #                 p1 = wp.transform.location + carla.Location(extent_y * r_vec.x, extent_y * r_vec.y)
-    #                 p2 = wp.transform.location + carla.Location(-extent_y * r_vec.x, -extent_y * r_vec.y)
-    #                 route_bb.append([p1.x, p1.y, p1.z])
-    #                 route_bb.append([p2.x, p2.y, p2.z])
-
-    #             if len(route_bb) < 3:
-    #                 # 2 points don't create a polygon, nothing to check
-    #                 return (False, None, -1)
-    #             ego_polygon = Polygon(route_bb)
-
-    #             # Compare the two polygons
-    #             for target_vehicle in vehicle_list:
-    #                 target_extent = target_vehicle.bounding_box.extent.x
-    #                 if target_vehicle.id == self._vehicle.id:
-    #                     continue
-    #                 if ego_location.distance(target_vehicle.get_location()) > max_distance:
-    #                     continue
-
-    #                 target_bb = target_vehicle.bounding_box
-    #                 target_vertices = target_bb.get_world_vertices(target_vehicle.get_transform())
-    #                 target_list = [[v.x, v.y, v.z] for v in target_vertices]
-    #                 target_polygon = Polygon(target_list)
-
-    #                 if ego_polygon.intersects(target_polygon):
-    #                     return (True, target_vehicle, compute_distance(target_vehicle.get_location(), ego_location))
-
-    #             return (False, None, -1)
-
-    #     return (False, None, -1)
+        return (False, None, -1)

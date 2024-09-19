@@ -3,9 +3,11 @@ import carla
 # from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import *
 # from srunner.scenarios.basic_scenario import BasicScenario
 # from srunner.tools.scenario_helper import *
+import random
 
 from agents.navigation.global_route_planner import GlobalRoutePlanner
-
+from agents.navigation.basic_agent import BasicAgent
+from agents.navigation.behavior_agent import BehaviorAgent
 
 class NearWarningScenario():
 
@@ -69,16 +71,35 @@ class NearWarningScenario():
         #ego_vehicle = SpawnActor(ego_bp, home_transform)
 
         route = grp.trace_route(spawn_point_17, location_1)
-        waypoint_list = []
-        for waypoint in range(len(route[0])):
-            print("idk any more  %s ", route[0][waypoint][0])
-            waypoint_list.append(route[0][waypoint][0])
+        # waypoint_list = []
+        # for waypoint in range(len(route[0])):
+        #     print("idk any more  %s ", route[0][waypoint][0])
+        #     waypoint_list.append(route[0][waypoint][0])
 
-        for waypoint in waypoint_list:
-            print("drawing %s", waypoint.transform.location)
-            world.debug.draw_string(waypoint.transform.location, '^', draw_shadow=False,
+        for waypoint in route:
+            print("drawing %s", waypoint[0].transform.location)
+            world.debug.draw_string(waypoint[0].transform.location, '^', draw_shadow=False,
                                     color=carla.Color(r=0, g=0, b=255), life_time=120.0,
                                     persistent_lines=True)
+
+
+        # Set up the steps the vehicle will take to follow the route
+        print("Setting up the agent")
+        agent = BasicAgent(ego_vehicle)
+        agent = BehaviorAgent(ego_vehicle, behavior='aggressive')
+
+        agent.set_destination(random.choice(spawn_points).location)
+
+
+        # I need to set this outside the scenario so
+        # that we can spawn other actors
+        print("Beginning to follow route")
+        while True: 
+            ego_vehicle.apply_control(agent.run_step())
+
+            if agent.done():
+                print("arrived!")
+                break
 
 
 

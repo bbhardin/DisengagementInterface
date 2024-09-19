@@ -12,7 +12,7 @@ from agents.navigation.global_route_planner import GlobalRoutePlanner
 from disengagement_scenarios.town03_disengage_scenario import NearWarningScenario
 #from agents.navigation import generate_traffic
 
-from commentary.commentary_controller import ComentaryController
+#from commentary.commentary_controller import ComentaryController
 
 #from examples.DReyeVR_utils import DReyeVRSensor
 
@@ -160,11 +160,6 @@ def main():
         world = client.load_world("Town03")
         actor_list = world.get_actors()
         ego_actor = actor_list.filter("harplab.dreyevr_vehicle.teslam3")
-
-        # for actor in actor_list:
-        #     print("ego actor %s", actor)
-        # return
-
         _map = world.get_map()
 
 

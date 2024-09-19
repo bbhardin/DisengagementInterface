@@ -44,32 +44,18 @@ class GlobalRoutePlanner(object):
         from origin to destination
         """
         route_trace = []
-        route_edges = {}
-        route_edges_list = []
         route = self._path_search(origin, destination)
         current_waypoint = self._wmap.get_waypoint(origin)
         destination_waypoint = self._wmap.get_waypoint(destination)
-        count = 0
+
         for i in range(len(route) - 1):
             road_option = self._turn_decision(i, route)
             edge = self._graph.edges[route[i], route[i+1]]
             path = []
 
             if edge['type'] != RoadOption.LANEFOLLOW and edge['type'] != RoadOption.VOID:
-                
                 route_trace.append((current_waypoint, road_option))
-
-                #ALSO LOG THE ROAD ID OF THE WAYPOINT
-                edge_key = str(current_waypoint.road_id) +'-'+ str(current_waypoint.section_id) + '-' + \
-                    str(current_waypoint.lane_id)
-                if edge_key not in route_edges:
-                    route_edges_list.append(road_option)
-                    count +=1
-                route_edges[edge_key] = [road_option, count]
-                
                 exit_wp = edge['exit_waypoint']
-
-
                 n1, n2 = self._road_id_to_edge[exit_wp.road_id][exit_wp.section_id][exit_wp.lane_id]
                 next_edge = self._graph.edges[n1, n2]
                 if next_edge['path']:
@@ -79,14 +65,6 @@ class GlobalRoutePlanner(object):
                 else:
                     current_waypoint = next_edge['exit_waypoint']
                 route_trace.append((current_waypoint, road_option))
-                
-                #ALSO LOG THE ROAD ID OF THE WAYPOINT
-                edge_key = str(current_waypoint.road_id) +'-'+ str(current_waypoint.section_id) + '-' + \
-                        str(current_waypoint.lane_id)
-                if edge_key not in route_edges:
-                    route_edges_list.append(road_option)
-                    count +=1
-                route_edges[edge_key] = [road_option, count]
 
             else:
                 path = path + [edge['entry_waypoint']] + edge['path'] + [edge['exit_waypoint']]
@@ -94,15 +72,6 @@ class GlobalRoutePlanner(object):
                 for waypoint in path[closest_index:]:
                     current_waypoint = waypoint
                     route_trace.append((current_waypoint, road_option))
-
-                    #ALSO LOG THE ROAD ID OF THE WAYPOINT
-                    edge_key = str(current_waypoint.road_id) +'-'+ str(current_waypoint.section_id) + '-' + \
-                        str(current_waypoint.lane_id)
-                    if edge_key not in route_edges:
-                        route_edges_list.append(road_option)
-                        count +=1
-                    route_edges[edge_key] = [road_option, count]
-                    
                     if len(route)-i <= 2 and waypoint.transform.location.distance(destination) < 2*self._sampling_resolution:
                         break
                     elif len(route)-i <= 2 and current_waypoint.road_id == destination_waypoint.road_id and current_waypoint.section_id == destination_waypoint.section_id and current_waypoint.lane_id == destination_waypoint.lane_id:
@@ -110,7 +79,7 @@ class GlobalRoutePlanner(object):
                         if closest_index > destination_index:
                             break
 
-        return route_trace, route_edges, route_edges_list
+        return route_trace
 
     def _build_topology(self):
         """
