@@ -40,8 +40,8 @@ class NearWarningScenario():
         spawn_points = town_map.get_spawn_points()
         # Spawn points are literally just transforms. They have no names.
         # # home_location = None
-        for index, point in enumerate(spawn_points):
-            print("spawn point %s", spawn_points[index])
+        # for index, point in enumerate(spawn_points):
+        #     print("spawn point %s", spawn_points[index])
             # if (point.id == "VehicleSpawnPoint157"):
             #     home_location = point.location
 
@@ -52,9 +52,9 @@ class NearWarningScenario():
         #home_location = town_map.transform_to_geolocation(home_location)
         #test_location = carla.Location(x=0, y=0, z=10)
         #start_location = carla.Location()
-        spawn_point_157 = carla.Location(x=102.849, y=66.711, z=1.0)
+        spawn_point_157 = carla.Location(x=102.849, y=63.711, z=1.0)
         spawn_point_17 = carla.Location(x=102.849, y=66.711, z=0.02)
-        location_1 = carla.Location(x=-145.426, y=66.575, z=0.02)
+        location_1 = carla.Location(x=-145.426, y=65.575, z=0.02)
         location_2 = carla.Location(x=-18.796, y=130.234, z=0.02)
         location_3 =carla.Location(x=-4.988, y=46.7459, z=0.02)
 
@@ -67,10 +67,14 @@ class NearWarningScenario():
         
         # SpawnActor = carla.command.SpawnActor
         ego_vehicle.set_location(spawn_point_157)
+
+        car_transform = carla.Transform(spawn_point_157, carla.Rotation(0, 0, -1))
+        ego_vehicle.set_transform(car_transform)
+
         #ego_vehicle.destroy()
         #ego_vehicle = SpawnActor(ego_bp, home_transform)
 
-        route = grp.trace_route(spawn_point_17, location_1)
+        route = grp.trace_route(spawn_point_157, location_2)
         # waypoint_list = []
         # for waypoint in range(len(route[0])):
         #     print("idk any more  %s ", route[0][waypoint][0])
@@ -79,29 +83,37 @@ class NearWarningScenario():
         for waypoint in route:
             print("drawing %s", waypoint[0].transform.location)
             world.debug.draw_string(waypoint[0].transform.location, '^', draw_shadow=False,
-                                    color=carla.Color(r=0, g=0, b=255), life_time=120.0,
+                                    color=carla.Color(r=0, g=0, b=255), life_time=320.0,
                                     persistent_lines=True)
 
 
         # Set up the steps the vehicle will take to follow the route
         print("Setting up the agent")
-        agent = BasicAgent(ego_vehicle)
-        agent = BehaviorAgent(ego_vehicle, behavior='aggressive')
 
-        agent.set_destination(random.choice(spawn_points).location)
+        settings = world.get_settings()
+        # settings.fixed_delta_seconds = 0.05
+        settings.synchronous_mode = False
+        world.apply_settings(settings)
+        #agent = BasicAgent(ego_vehicle)
+        agent = BehaviorAgent(ego_vehicle, behavior='aggressive')
+        agent.set_target_speed(40)
+        agent.set_global_plan(route, stop_waypoint_creation=False, clean_queue=True)
+
+        agent.set_destination(location_2)
+
+        ego_vehicle.set_autopilot(True)
 
 
         # I need to set this outside the scenario so
         # that we can spawn other actors
         print("Beginning to follow route")
-        while True: 
-            ego_vehicle.apply_control(agent.run_step())
-
+        while True:     
             if agent.done():
                 print("arrived!")
                 break
+            ego_vehicle.apply_control(agent.run_step())
 
-
+        print("broke out of the loop")
 
     # def _create_pedestrian(self):
     #     # Define pedestrian blueprint and spawn point
