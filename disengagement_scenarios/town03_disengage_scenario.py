@@ -57,7 +57,32 @@ class NearWarningScenario():
         spawn_point_17 = carla.Location(x=102.849, y=66.711, z=0.02)
         location_1 = carla.Location(x=145.426, y=65.575, z=0.02)
         location_2 = carla.Location(x=18.796, y=130.234, z=0.02)
-        location_3 =carla.Location(x=4.988, y=46.7459, z=0.02)
+        location_3 = carla.Location(x=4.988, y=46.7459, z=0.02)
+        location_4 = carla.Location(x=9.259, y=-119.455, z=0.02)
+        location_5 = carla.Location(x=67.818, y=-133.752, z=8.01)
+        location_6 = carla.Location(x=136.308, y=-131.928, z=8.01)
+        location_7 = carla.Location(x=149.654, y=-85.847, z=8.01)
+        location_8 = carla.Location(x=99.284, y=-76.950, z=8.02)
+        location_8_v2 = carla.Location(x=148.417, y=-20.695, z=0.097)
+        location_9 = carla.Location(x=77.557, y=-20.808, z=0.83)
+        location_10 = carla.Location(x=31.038, y=-7.893, z=0.02)
+        location_11 = carla.Location(x=-62.416, y=-139.950, z=0.02)
+        location_12 = carla.Location(x=-88.310, y=-13.032, z=0.02)
+        location_13 = carla.Location(x=-126.684, y=42.113, z=0.02)
+        location_14 = carla.Location(x=-145.674, y=9.336, z=0.02)
+        location_15 = carla.Location(x=-101.066, y=-136.672, z=0.02)
+        location_16 = carla.Location(x=-16.481, y=-197.942, z=0.02)
+        location_17 = carla.Location(x=67.540, y=-195.973, z=0.02)
+        location_18 = carla.Location(x=84.192, y=-204.755, z=0.02) # Police barracade failure situation
+        location_19 = carla.Location(x=12.926, y=193.666, z=0.02)
+        location_20 = carla.Location(x=5.441, y=147.183, z=0.02)
+        location_21 = carla.Location(x=170.514, y=83.198, z=0.02)
+        #  Return to home then
+        #  location_22 = carla.Location(x=, y=, z=0.02)
+        # location_23 = carla.Location(x=, y=, z=0.02)
+
+
+
 
         #home_transform = carla.Transform(location=home_location, rotation=carla.Rotation())
         # point_2 = carla.Location()
@@ -99,7 +124,7 @@ class NearWarningScenario():
         #agent = BasicAgent(ego_vehicle)
         agent = BasicAgent(ego_vehicle)
         # TODO: WHY IS BEHAVIOUR AGENT BROKEN??
-        agent.set_target_speed(30)
+        agent.set_target_speed(60)
         agent.set_global_plan(route, stop_waypoint_creation=True, clean_queue=True)
         agent.set_destination(location_2)
 
@@ -111,10 +136,14 @@ class NearWarningScenario():
         print("Beginning to follow route")
         dest_index = 0  # We skip the first destination since it's already programmed
                         #   this behaviour should be modified to make more sense
-        destinations = [location_1, location_2, location_3]
+        destinations = [location_1, location_2, location_3, location_4, location_5, location_6,
+                        location_7, location_8_v2, location_10, location_11, location_12,
+                        location_13, location_14, location_15, location_16, location_17, location_18,
+                        location_19, location_20, location_21]
         
 
         traffic_manager = client.get_trafficmanager(8000)
+        #traffic_manager.vehicle_percentage_speed_difference(ego_vehicle, 85)
         ego_vehicle.set_autopilot(True, traffic_manager.get_port())
 
         # Adjust specific TrafficManager settings for the vehicle
@@ -125,11 +154,15 @@ class NearWarningScenario():
         # traffic_manager.vehicle_percentage_speed_difference(ego_vehicle, -10) 
 
         traffic_manager.set_path(ego_vehicle, destinations)
+        traffic_manager.auto_lane_change(ego_vehicle, True)
+        traffic_manager.global_percentage_speed_difference(-300)
         
         while True:
             if agent.done():
                 print("Agent is done!")
                 break
+
+            #print("%s", ego_veh())
 
             # Use the below code section to stop automation 
             # distance = ego_vehicle.get_location().distance(destinations[dest_index])
