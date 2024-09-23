@@ -1,4 +1,5 @@
 import carla
+import time
 # from srunner.scenariomanager.scenarioatomics.atomic_behaviors import *
 # from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import *
 # from srunner.scenarios.basic_scenario import BasicScenario
@@ -26,7 +27,7 @@ class NearWarningScenario():
         # self.route = self._create_route(config)
 
 
-    def run_scenario(town_map, world, ego_vehicle):
+    def run_scenario(town_map, world, ego_vehicle, client):
         print("setting up the scenario and path to follow!")
         sampling_resolution = 2
         grp = GlobalRoutePlanner(town_map, sampling_resolution) # maybe world should be town_map
@@ -54,9 +55,9 @@ class NearWarningScenario():
         #start_location = carla.Location()
         spawn_point_157 = carla.Location(x=102.849, y=63.711, z=1.0)
         spawn_point_17 = carla.Location(x=102.849, y=66.711, z=0.02)
-        location_1 = carla.Location(x=-145.426, y=65.575, z=0.02)
-        location_2 = carla.Location(x=-18.796, y=130.234, z=0.02)
-        location_3 =carla.Location(x=-4.988, y=46.7459, z=0.02)
+        location_1 = carla.Location(x=145.426, y=65.575, z=0.02)
+        location_2 = carla.Location(x=18.796, y=130.234, z=0.02)
+        location_3 =carla.Location(x=4.988, y=46.7459, z=0.02)
 
         #home_transform = carla.Transform(location=home_location, rotation=carla.Rotation())
         # point_2 = carla.Location()
@@ -74,14 +75,15 @@ class NearWarningScenario():
         #ego_vehicle.destroy()
         #ego_vehicle = SpawnActor(ego_bp, home_transform)
 
-        route = grp.trace_route(spawn_point_157, location_2)
+        route = grp.trace_route(location_1, location_3)
         # waypoint_list = []
         # for waypoint in range(len(route[0])):
         #     print("idk any more  %s ", route[0][waypoint][0])
         #     waypoint_list.append(route[0][waypoint][0])
 
+        # Todo: trace all segments of the route
         for waypoint in route:
-            print("drawing %s", waypoint[0].transform.location)
+            # print("drawing %s", waypoint[0].transform.location)
             world.debug.draw_string(waypoint[0].transform.location, '^', draw_shadow=False,
                                     color=carla.Color(r=0, g=0, b=255), life_time=320.0,
                                     persistent_lines=True)
@@ -95,23 +97,73 @@ class NearWarningScenario():
         settings.synchronous_mode = False
         world.apply_settings(settings)
         #agent = BasicAgent(ego_vehicle)
-        agent = BehaviorAgent(ego_vehicle, behavior='aggressive')
-        agent.set_target_speed(40)
-        agent.set_global_plan(route, stop_waypoint_creation=False, clean_queue=True)
-
+        agent = BasicAgent(ego_vehicle)
+        # TODO: WHY IS BEHAVIOUR AGENT BROKEN??
+        agent.set_target_speed(30)
+        agent.set_global_plan(route, stop_waypoint_creation=True, clean_queue=True)
         agent.set_destination(location_2)
 
-        ego_vehicle.set_autopilot(True)
+        #ego_vehicle.set_autopilot(True)
 
 
         # I need to set this outside the scenario so
         # that we can spawn other actors
         print("Beginning to follow route")
-        while True:     
+        dest_index = 0  # We skip the first destination since it's already programmed
+                        #   this behaviour should be modified to make more sense
+        destinations = [location_1, location_2, location_3]
+        
+
+        traffic_manager = client.get_trafficmanager(8000)
+        ego_vehicle.set_autopilot(True, traffic_manager.get_port())
+
+        # Adjust specific TrafficManager settings for the vehicle
+        # traffic_manager.ignore_lights_percentage(ego_vehicle, 50)  # 50% chance the vehicle will ignore traffic lights
+        # traffic_manager.ignore_walkers_percentage(ego_vehicle, 0)  # The vehicle will respect pedestrians 100%
+        # traffic_manager.random_left_lanechange_percentage(ego_vehicle, 30)  # 30% chance of random left lane changes
+        # traffic_manager.random_right_lanechange_percentage(ego_vehicle, 30)  # 30% chance of random right lane changes
+        # traffic_manager.vehicle_percentage_speed_difference(ego_vehicle, -10) 
+
+        traffic_manager.set_path(ego_vehicle, destinations)
+        
+        while True:
             if agent.done():
-                print("arrived!")
+                print("Agent is done!")
                 break
-            ego_vehicle.apply_control(agent.run_step())
+
+            # Use the below code section to stop automation 
+            # distance = ego_vehicle.get_location().distance(destinations[dest_index])
+            # if distance < 10.0:
+            #     print("close and done!")
+            #     ego_vehicle.set_autopilot(False)
+            #     # Need to stop the vehicle? Well disengage wouldn't do that..
+            #     time.sleep(30)
+            #     print('restarted')
+            #     ego_vehicle.set_autopilot(True)
+            #     dest_index +=1 
+            
+
+            world.tick()
+        # while True:    
+            # print("driving you know") 
+            # distance = ego_vehicle.get_location().distance(destinations[dest_index])
+            # #if agent.done():
+            # # print("distance %s", distance)
+            # ego_vehicle.apply_control(agent.run_step())
+            # if agent.done():
+            #     # Iterate to the next destination or stop if we are done
+            #     print("arrived!, going next")
+            #     #agent.set_destination(random.choice(spawn_points).location)
+            #     #route = grp.trace_route(location_1, location_2) # Todo probably remove
+            #     #gent.set_global_plan(route, stop_waypoint_creation=True, clean_queue=True)
+            #     agent.set_destination(destinations[dest_index])
+            #     # ?print("distance to next %s", distance)
+            #     dest_index += 1
+            #     if (dest_index == len(destinations)):
+            #         print("arrived for good")
+            #         break
+            
+            # world.tick()
 
         print("broke out of the loop")
 

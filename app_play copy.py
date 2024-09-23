@@ -148,10 +148,12 @@ def main():
 
     try:
         #connect to Carla server
+
+        start_server()
         
-        # thread = threading.Thread(target=start_server)
-        # thread.start()
-        # time.sleep(10)
+        thread = threading.Thread(target=start_server)
+        thread.start()
+        time.sleep(10)
 
         client = carla.Client(args.host, args.port)
         client.set_timeout(60.0)
@@ -163,7 +165,7 @@ def main():
         _map = world.get_map()
 
 
-        NearWarningScenario.run_scenario(_map, world, ego_actor[0], client)
+        NearWarningScenario.run_scenario(_map, world, ego_actor[0])
         #global_planner = GlobalRoutePlanner(_map, sampling_resolution)
 
         #Get the global  route from ego's current position to a chosen destination
