@@ -100,7 +100,7 @@ class NearWarningScenario():
         #ego_vehicle.destroy()
         #ego_vehicle = SpawnActor(ego_bp, home_transform)
 
-        route = grp.trace_route(location_1, location_3)
+        route = grp.trace_route(spawn_point_157, location_1)
         # waypoint_list = []
         # for waypoint in range(len(route[0])):
         #     print("idk any more  %s ", route[0][waypoint][0])
@@ -121,12 +121,15 @@ class NearWarningScenario():
         # settings.fixed_delta_seconds = 0.05
         settings.synchronous_mode = False
         world.apply_settings(settings)
-        #agent = BasicAgent(ego_vehicle)
         agent = BasicAgent(ego_vehicle)
+        #agent = BasicAgent(ego_vehicle)
         # TODO: WHY IS BEHAVIOUR AGENT BROKEN??
         agent.set_target_speed(60)
         agent.set_global_plan(route, stop_waypoint_creation=True, clean_queue=True)
-        agent.set_destination(location_2)
+        agent.follow_speed_limits(False)
+        agent.ignore_stop_signs(False)
+        agent.ignore_traffic_lights(False)
+        #agent.set_destination(location_2)
 
         #ego_vehicle.set_autopilot(True)
 
@@ -134,17 +137,18 @@ class NearWarningScenario():
         # I need to set this outside the scenario so
         # that we can spawn other actors
         print("Beginning to follow route")
-        dest_index = 0  # We skip the first destination since it's already programmed
+        dest_index = 1  # We skip the first destination since it's already programmed
                         #   this behaviour should be modified to make more sense
         destinations = [location_1, location_2, location_3, location_4, location_5, location_6,
                         location_7, location_8_v2, location_10, location_11, location_12,
                         location_13, location_14, location_15, location_16, location_17, location_18,
                         location_19, location_20, location_21]
+        destinations_2 = [location_1]
         
 
-        traffic_manager = client.get_trafficmanager(8000)
+        #traffic_manager = client.get_trafficmanager(8000)
         #traffic_manager.vehicle_percentage_speed_difference(ego_vehicle, 85)
-        ego_vehicle.set_autopilot(True, traffic_manager.get_port())
+        #ego_vehicle.set_autopilot(True, traffic_manager.get_port())
 
         # Adjust specific TrafficManager settings for the vehicle
         # traffic_manager.ignore_lights_percentage(ego_vehicle, 50)  # 50% chance the vehicle will ignore traffic lights
@@ -153,15 +157,30 @@ class NearWarningScenario():
         # traffic_manager.random_right_lanechange_percentage(ego_vehicle, 30)  # 30% chance of random right lane changes
         # traffic_manager.vehicle_percentage_speed_difference(ego_vehicle, -10) 
 
-        traffic_manager.set_path(ego_vehicle, destinations)
-        traffic_manager.auto_lane_change(ego_vehicle, True)
-        traffic_manager.global_percentage_speed_difference(-300)
+        # traffic_manager.set_path(ego_vehicle, destinations_2)
+        # traffic_manager.auto_lane_change(ego_vehicle, True)
+        # traffic_manager.global_percentage_speed_difference(-300)
         
         while True:
-            if agent.done():
-                print("Agent is done!")
-                break
+            # ego_vehicle.set_autopilot(True, traffic_manager.get_port())
+            # if agent.done():
+            #     print("Agent is done!")
+            #     break
 
+            if agent.done():
+                if (dest_index == 3):
+                    print('Disengagement')
+                    # Nice, ok now we just have to have a way for the user to reactivate it.
+                    # TODO: how can we ensure that the user drives it in the correct direction.
+                    break
+                agent.set_destination(destinations[dest_index])
+                dest_index += 1
+                if (dest_index == len(destinations)):
+                    print("finished all the disengagements")
+                    break
+                print("The target has been reached, searching for another target")
+
+            ego_vehicle.apply_control(agent.run_step())
             #print("%s", ego_veh())
 
             # Use the below code section to stop automation 
