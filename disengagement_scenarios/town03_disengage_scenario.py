@@ -6,6 +6,7 @@ import time
 # from srunner.tools.scenario_helper import *
 import random
 import math
+import json
 
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.basic_agent import BasicAgent
@@ -124,11 +125,24 @@ class NearWarningScenario():
         #     waypoint_list.append(route[0][waypoint][0])
 
         # Todo: trace all segments of the route
+        points = []
         for waypoint in route:
             # print("drawing %s", waypoint[0].transform.location)
-            world.debug.draw_string(waypoint[0].transform.location, '^', draw_shadow=False,
+            loc = waypoint[0].transform.location
+            world.debug.draw_string(loc, '^', draw_shadow=False,
                                     color=carla.Color(r=0, g=0, b=255), life_time=320.0,
                                     persistent_lines=True)
+            points.append([loc.x, loc.y, loc.z])
+
+        # Convert waypoints to json and save so that our frontend can read
+        #    the route on scene load.
+        data = {}
+        data["waypoints"] = points
+        print(data)
+        # Check if the file is accessible (not locked) and ready to be written to
+        with open("C:/Applications/ben_code/waypoints03.json", "w") as f:
+            json.dump(data, f)
+            # Do I need to close the file now?
 
 
         # Set up the steps the vehicle will take to follow the route
