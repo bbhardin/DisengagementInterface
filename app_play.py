@@ -166,7 +166,7 @@ def main():
         NearWarningScenario.run_scenario(_map, world, ego_actor[0], client)
         #global_planner = GlobalRoutePlanner(_map, sampling_resolution)
 
-        #Get the global  route from ego's current position to a chosen destination
+        #Get the global route from ego's current position to a chosen destination
         #global_route, global_route_cmd, route_list = global_planner.trace_route(ego_origin, ego_destination)
 
         

@@ -5,10 +5,13 @@ import time
 # from srunner.scenarios.basic_scenario import BasicScenario
 # from srunner.tools.scenario_helper import *
 import random
+import math
 
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.basic_agent import BasicAgent
 from agents.navigation.behavior_agent import BehaviorAgent
+
+from disengagement_scenarios.carla_painter import CarlaPainter
 
 class NearWarningScenario():
 
@@ -26,13 +29,31 @@ class NearWarningScenario():
         # Setup the route for the ego vehicle
         # self.route = self._create_route(config)
 
+    def get_angle_between_waypoints(wp1, wp2):
+        """
+        Calculate the angle between two waypoints.
+        """
+        dx = wp2.transform.location.x - wp1.transform.location.x
+        dy = wp2.transform.location.y - wp1.transform.location.y
+        angle = math.atan2(dy, dx)
+        return math.degrees(angle)
+
+    def is_turning(wp1, wp2, wp3, turn_threshold=20):
+        """
+        Check if the vehicle is turning by comparing the angles between consecutive waypoints.
+        If the angle difference exceeds the `turn_threshold`, it's considered a turn.
+        """
+        angle1 = NearWarningScenario.get_angle_between_waypoints(wp1, wp2)
+        angle2 = NearWarningScenario.get_angle_between_waypoints(wp2, wp3)
+        angle_diff = abs(angle1 - angle2)
+        return angle_diff > turn_threshold
+
 
     def run_scenario(town_map, world, ego_vehicle, client):
         print("setting up the scenario and path to follow!")
         sampling_resolution = 2
         grp = GlobalRoutePlanner(town_map, sampling_resolution) # maybe world should be town_map
         #grp.setup()
-
 
         # Todo: abstract some of this to the parent caller so that I don't have to repeat code
         #       for every scenario. Can pass the spawn point to run_scenario method for instance
@@ -68,7 +89,7 @@ class NearWarningScenario():
         location_10 = carla.Location(x=31.038, y=-7.893, z=0.02)
         location_11 = carla.Location(x=-62.416, y=-139.950, z=0.02)
         location_12 = carla.Location(x=-88.310, y=-13.032, z=0.02)
-        location_13 = carla.Location(x=-126.684, y=42.113, z=0.02)
+        location_13 = carla.Location(x=-120.684, y=37.113, z=0.02)
         location_14 = carla.Location(x=-145.674, y=9.336, z=0.02)
         location_15 = carla.Location(x=-101.066, y=-136.672, z=0.02)
         location_16 = carla.Location(x=-16.481, y=-197.942, z=0.02)
@@ -89,18 +110,14 @@ class NearWarningScenario():
 
 
         print("about to spawn the ego vehicle at home")
-        # ego_bp = world.get_blueprint_library().find('harplab.dreyevr_vehicle.teslam3')
-        
-        # SpawnActor = carla.command.SpawnActor
-        ego_vehicle.set_location(spawn_point_157)
-
-        car_transform = carla.Transform(spawn_point_157, carla.Rotation(0, 0, -1))
+        car_transform = carla.Transform(spawn_point_157, carla.Rotation(0, 0, 0))
+        #car_transform = carla.Transform(location_13, carla.Rotation(0, 140, 0))
         ego_vehicle.set_transform(car_transform)
 
         #ego_vehicle.destroy()
         #ego_vehicle = SpawnActor(ego_bp, home_transform)
 
-        route = grp.trace_route(spawn_point_157, location_1)
+        route = grp.trace_route(spawn_point_157, location_4)
         # waypoint_list = []
         # for waypoint in range(len(route[0])):
         #     print("idk any more  %s ", route[0][waypoint][0])
@@ -121,15 +138,17 @@ class NearWarningScenario():
         # settings.fixed_delta_seconds = 0.05
         settings.synchronous_mode = False
         world.apply_settings(settings)
-        agent = BasicAgent(ego_vehicle)
-        #agent = BasicAgent(ego_vehicle)
-        # TODO: WHY IS BEHAVIOUR AGENT BROKEN??
-        agent.set_target_speed(60)
-        agent.set_global_plan(route, stop_waypoint_creation=True, clean_queue=True)
+
+        agent = BasicAgent(ego_vehicle, 20, )
+        #agent.set_target_speed(20)
+        agent.set_global_plan(route, stop_waypoint_creation=False, clean_queue=True)
         agent.follow_speed_limits(False)
         agent.ignore_stop_signs(False)
-        agent.ignore_traffic_lights(False)
-        #agent.set_destination(location_2)
+        agent.ignore_traffic_lights(True) # TODO CHANGE THIS BACK TO FALSE
+        
+        
+        # This seems to be a problem
+        agent.set_destination(location_3)
 
         #ego_vehicle.set_autopilot(True)
 
@@ -137,13 +156,16 @@ class NearWarningScenario():
         # I need to set this outside the scenario so
         # that we can spawn other actors
         print("Beginning to follow route")
-        dest_index = 1  # We skip the first destination since it's already programmed
+        dest_index = 2  # We skip the first destination since it's already programmed
                         #   this behaviour should be modified to make more sense
         destinations = [location_1, location_2, location_3, location_4, location_5, location_6,
                         location_7, location_8_v2, location_10, location_11, location_12,
                         location_13, location_14, location_15, location_16, location_17, location_18,
                         location_19, location_20, location_21]
-        destinations_2 = [location_1]
+        #destinations = [location_13, location_14, location_15, location_16, location_17, location_18,
+                        #location_19, location_20, location_21]
+        # destinations = [location_1]
+        destinations_2 = [location_4, location_5, location_6]
         
 
         #traffic_manager = client.get_trafficmanager(8000)
@@ -160,27 +182,98 @@ class NearWarningScenario():
         # traffic_manager.set_path(ego_vehicle, destinations_2)
         # traffic_manager.auto_lane_change(ego_vehicle, True)
         # traffic_manager.global_percentage_speed_difference(-300)
-        
+
+        waypoints = agent._local_planner._waypoints_queue
+        for waypoint in waypoints:
+            world.debug.draw_string(waypoint[0].transform.location, 'f', draw_shadow=False,
+                                    color=carla.Color(r=0, g=255, b=0), life_time=320.0,
+                                    persistent_lines=True)
+        em_stop = False
+
+        print("before the painter")
+        painter = CarlaPainter('localhost', 8081)
+        print("after the painter")
+        ego_loc = ego_vehicle.get_location()
+        trajectories = [[]]
+
         while True:
+
+            trajectories[0].append([ego_loc.x, ego_loc.y, ego_loc.z])
+            painter.draw_polylines(trajectories)
+            ego_velocity = ego_vehicle.get_velocity()
+            velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
+                    + ", {:.2f}".format(ego_velocity.z)
+            painter.draw_texts([velocity_str], [[ego_loc.x, ego_loc.y, ego_loc.z+20.0]], size=20)
+            
+            #             [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=20)
             # ego_vehicle.set_autopilot(True, traffic_manager.get_port())
             # if agent.done():
             #     print("Agent is done!")
             #     break
 
-            if agent.done():
-                if (dest_index == 3):
-                    print('Disengagement')
-                    # Nice, ok now we just have to have a way for the user to reactivate it.
-                    # TODO: how can we ensure that the user drives it in the correct direction.
-                    break
-                agent.set_destination(destinations[dest_index])
-                dest_index += 1
-                if (dest_index == len(destinations)):
-                    print("finished all the disengagements")
-                    break
-                print("The target has been reached, searching for another target")
 
-            ego_vehicle.apply_control(agent.run_step())
+
+            # control = carla.VehicleControl()
+            # control.throttle = 0.0
+            # control.brake = 50.0
+            # agent.add_emergency_stop(control)
+
+            if agent.done():
+
+                # Set a new destination
+                agent.set_destination(destinations[dest_index])
+
+                # Are we at a spot where we should disengage?
+                if (dest_index == 2):
+                    print('Disengagement')
+
+                    # Bring the vehicle to a stop
+                    ego_vehicle.apply_control(carla.VehicleControl(throttle=0, brake=1.0, hand_brake=False))
+                    #agent.set_target_speed(0)
+                    em_stop = True # Overwrite the set speed to 15 that happens at turns
+
+                    # Show the user where to drive next
+
+                    # Re-engage the automation once reach the correct waypoint
+                    
+                #     # Nice, ok now we just have to have a way for the user to reactivate it.
+                #     # TODO: how can we ensure that the user drives it in the correct direction.
+                #     #time.sleep(1)
+                #     # route_2 = grp.trace_route(location_4, location_6)
+                #     # agent.set_global_plan(route_2, stop_waypoint_creation=True, clean_queue=True)
+                #     agent.set_destination(location_2)
+                #     em_stop = True # seems that em stop has to occur while the agent has a 
+                #         #       destination. Cannot occur while agent.done() is true.
+                
+                # print("set a new destination")
+                # dest_index += 1
+                # if (dest_index == len(destinations)):
+                #     print("finished all the disengagements")
+                #     break
+                # print("The target has been reached, searching for another target")
+
+            if (em_stop):
+                print("Applying em stop")
+                # control = carla.VehicleControl()
+                # control.throttle = 0.0
+                # control.brake = 50.0
+                # agent.add_emergency_stop(control)
+                # ego_vehicle.apply_control(control)
+                #ego_vehicle.apply_control(carla.VehicleControl(throttle=0, brake=1.0, hand_brake=False))
+                agent.set_target_speed(0)
+                ego_vehicle.apply_control(agent.run_step())
+            else:
+                waypoints = agent._local_planner._waypoints_queue
+                # Check if the agent is turning
+                if len(waypoints) > 2:
+                    wp1, wp2, wp3 = waypoints[0][0], waypoints[1][0], waypoints[2][0]
+                    if NearWarningScenario.is_turning(wp1, wp2, wp3, 10):
+                        #print("Approaching a turn, slowing down. %s", wp1)
+                        agent.set_target_speed(20)  # Slow down for the turn
+                    else:
+                        agent.set_target_speed(50)
+                        #print("not approaching turn ")
+                ego_vehicle.apply_control(agent.run_step())
             #print("%s", ego_veh())
 
             # Use the below code section to stop automation 
