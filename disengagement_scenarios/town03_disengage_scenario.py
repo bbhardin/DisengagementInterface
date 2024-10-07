@@ -140,6 +140,7 @@ class NearWarningScenario():
         data["waypoints"] = points
         print(data)
         # Check if the file is accessible (not locked) and ready to be written to
+        # TODO: This file path should be relative
         with open("C:/Applications/ben_code/waypoints03.json", "w") as f:
             json.dump(data, f)
             # Do I need to close the file now?
@@ -205,7 +206,7 @@ class NearWarningScenario():
         em_stop = False
 
         print("before the painter")
-        painter = CarlaPainter('localhost', 8081)
+        #painter = CarlaPainter('localhost', 8081)
         print("after the painter")
         ego_loc = ego_vehicle.get_location()
         trajectories = [[]]
@@ -213,11 +214,11 @@ class NearWarningScenario():
         while True:
 
             trajectories[0].append([ego_loc.x, ego_loc.y, ego_loc.z])
-            painter.draw_polylines(trajectories)
+            #painter.draw_polylines(trajectories)
             ego_velocity = ego_vehicle.get_velocity()
             velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
                     + ", {:.2f}".format(ego_velocity.z)
-            painter.draw_texts([velocity_str], [[ego_loc.x, ego_loc.y, ego_loc.z+20.0]], size=20)
+            #painter.draw_texts([velocity_str], [[ego_loc.x, ego_loc.y, ego_loc.z+20.0]], size=20)
             
             #             [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=20)
             # ego_vehicle.set_autopilot(True, traffic_manager.get_port())
