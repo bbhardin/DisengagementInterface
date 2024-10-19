@@ -163,7 +163,7 @@ class NearWarningScenario():
         
         
         # This seems to be a problem
-        agent.set_destination(location_3)
+        agent.set_destination(location_1)
 
         #ego_vehicle.set_autopilot(True)
 
@@ -171,12 +171,18 @@ class NearWarningScenario():
         # I need to set this outside the scenario so
         # that we can spawn other actors
         print("Beginning to follow route")
-        dest_index = 2  # We skip the first destination since it's already programmed
+        dest_index = 0  # We skip the first destination since it's already programmed
                         #   this behaviour should be modified to make more sense
-        destinations = [location_1, location_2, location_3, location_4, location_5, location_6,
-                        location_7, location_8_v2, location_10, location_11, location_12,
-                        location_13, location_14, location_15, location_16, location_17, location_18,
-                        location_19, location_20, location_21]
+        location_3_5 = carla.Location() #SET UP
+        location_3_75 = carla.Location()
+        location_12_5 = carla.Location()
+        location_17_5 = carla.Location()
+        location_18_25 = carla.Location()
+        destinations = [location_1, location_2, location_3, location_3_5, location_3_75, location_4,
+                        location_5, location_6,
+                        location_7, location_8_v2, location_10, location_11, location_12, location_12_5,
+                        location_13, location_14, location_15, location_16, location_17, location_17_5, location_18,
+                        location_18_25, location_19, location_20, location_21]
         #destinations = [location_13, location_14, location_15, location_16, location_17, location_18,
                         #location_19, location_20, location_21]
         # destinations = [location_1]
@@ -205,27 +211,7 @@ class NearWarningScenario():
                                     persistent_lines=True)
         em_stop = False
 
-        print("before the painter")
-        #painter = CarlaPainter('localhost', 8081)
-        print("after the painter")
-        ego_loc = ego_vehicle.get_location()
-        trajectories = [[]]
-
         while True:
-
-            trajectories[0].append([ego_loc.x, ego_loc.y, ego_loc.z])
-            #painter.draw_polylines(trajectories)
-            ego_velocity = ego_vehicle.get_velocity()
-            velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
-                    + ", {:.2f}".format(ego_velocity.z)
-            #painter.draw_texts([velocity_str], [[ego_loc.x, ego_loc.y, ego_loc.z+20.0]], size=20)
-            
-            #             [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=20)
-            # ego_vehicle.set_autopilot(True, traffic_manager.get_port())
-            # if agent.done():
-            #     print("Agent is done!")
-            #     break
-
 
 
             # control = carla.VehicleControl()
@@ -239,7 +225,7 @@ class NearWarningScenario():
                 agent.set_destination(destinations[dest_index])
 
                 # Are we at a spot where we should disengage?
-                if (dest_index == 2):
+                if (destinations[dest_index] == location_3_5):
                     print('Disengagement')
 
                     # Bring the vehicle to a stop
@@ -250,25 +236,15 @@ class NearWarningScenario():
                     # Show the user where to drive next
 
                     # Re-engage the automation once reach the correct waypoint
-                    
-                #     # Nice, ok now we just have to have a way for the user to reactivate it.
-                #     # TODO: how can we ensure that the user drives it in the correct direction.
-                #     #time.sleep(1)
-                #     # route_2 = grp.trace_route(location_4, location_6)
-                #     # agent.set_global_plan(route_2, stop_waypoint_creation=True, clean_queue=True)
-                #     agent.set_destination(location_2)
-                #     em_stop = True # seems that em stop has to occur while the agent has a 
-                #         #       destination. Cannot occur while agent.done() is true.
-                
-                # print("set a new destination")
-                # dest_index += 1
-                # if (dest_index == len(destinations)):
-                #     print("finished all the disengagements")
-                #     break
-                # print("The target has been reached, searching for another target")
+                    # Would be nice to have the user press a button to reengage but not sure how to do that
+                    em_stop = True
+                    # if (NearWarningScenario.should_engage()):
+                    #     em_stop = False
+
+                dest_index += 1
 
             if (em_stop):
-                print("Applying em stop")
+                #print("Applying em stop")
                 # control = carla.VehicleControl()
                 # control.throttle = 0.0
                 # control.brake = 50.0
@@ -277,6 +253,10 @@ class NearWarningScenario():
                 #ego_vehicle.apply_control(carla.VehicleControl(throttle=0, brake=1.0, hand_brake=False))
                 agent.set_target_speed(0)
                 ego_vehicle.apply_control(agent.run_step())
+                if (ego_vehicle.get_location().distance(location_3) < 10.0):
+                    # User has driven us back on track. Reapply the automation.
+                    em_stop = False
+                    dest_index += 1 # Remove?
             else:
                 waypoints = agent._local_planner._waypoints_queue
                 # Check if the agent is turning
@@ -304,79 +284,8 @@ class NearWarningScenario():
             
 
             world.tick()
-        # while True:    
-            # print("driving you know") 
-            # distance = ego_vehicle.get_location().distance(destinations[dest_index])
-            # #if agent.done():
-            # # print("distance %s", distance)
-            # ego_vehicle.apply_control(agent.run_step())
-            # if agent.done():
-            #     # Iterate to the next destination or stop if we are done
-            #     print("arrived!, going next")
-            #     #agent.set_destination(random.choice(spawn_points).location)
-            #     #route = grp.trace_route(location_1, location_2) # Todo probably remove
-            #     #gent.set_global_plan(route, stop_waypoint_creation=True, clean_queue=True)
-            #     agent.set_destination(destinations[dest_index])
-            #     # ?print("distance to next %s", distance)
-            #     dest_index += 1
-            #     if (dest_index == len(destinations)):
-            #         print("arrived for good")
-            #         break
-            
-            # world.tick()
+    
+    #def should_engage(current_location, engage_waypoint):
+        # params are objects of carla.Location
 
-        print("broke out of the loop")
-
-    # def _create_pedestrian(self):
-    #     # Define pedestrian blueprint and spawn point
-    #     pedestrian_bp = self.world.get_blueprint_library().find('walker.pedestrian.0001')
-    #     pedestrian_spawn_point = carla.Transform(self._pedestrian_walk_start)
-    #     pedestrian_actor = self.world.spawn_actor(pedestrian_bp, pedestrian_spawn_point)
-    #     return pedestrian_actor
-
-    # def _create_route(self, config):
-    #     # Define a simple route for the ego vehicle
-    #     route = [config.trigger_points[0].location,
-    #              carla.Location(x=80, y=0, z=0)]
-    #     return route
-
-    # def _create_behavior(self):
-    #     # Define the behavior sequence for the scenario
-
-    #     # Step 1: Ego vehicle follows the route
-    #     driving_to_goal = WaypointFollower(self.ego_vehicle, target_speed=30)
-
-    #     # Step 2: Pedestrian starts crossing the road
-    #     pedestrian_crossing = WalkToLocation(self._pedestrian, self._pedestrian_walk_end)
-
-    #     # Step 3: Ego vehicle must stop if pedestrian is too close
-    #     stop_condition = InTriggerDistanceToVehicle(self._pedestrian, self.ego_vehicle, distance=10)
-
-    #     # Step 4: Ego vehicle stops for pedestrian to pass
-    #     stop_for_pedestrian = StopVehicle(self.ego_vehicle, self._pedestrian_walk_end, 0)
-
-    #     # Step 5: Ego vehicle resumes driving after pedestrian has crossed
-    #     resume_driving = WaypointFollower(self.ego_vehicle, target_speed=30)
-
-    #     # Define the sequence of actions
-    #     root = py_trees.composites.Sequence("PedestrianCrossingSequence")
-    #     root.add_child(driving_to_goal)
-    #     root.add_child(stop_condition)
-    #     root.add_child(pedestrian_crossing)
-    #     root.add_child(stop_for_pedestrian)
-    #     root.add_child(resume_driving)
-
-    #     return root
-
-    # def _create_test_criteria(self):
-    #     # Define test criteria, e.g., checking if the ego vehicle has reached the destination
-    #     goal_reached = InTriggerDistanceToLocation(self.ego_vehicle, self.route[-1], distance=5)
-    #     return [goal_reached]
-
-    # def terminate(self):
-    #     """
-    #     Clean up the actors and reset the world state.
-    #     """
-    #     if self._pedestrian is not None:
-    #         self._pedestrian.destroy()
-    #     super(PedestrianCrossingScenario, self).terminate()
+        # check how close these two are
