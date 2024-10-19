@@ -75,6 +75,8 @@ class NearWarningScenario():
         #home_location = town_map.transform_to_geolocation(home_location)
         #test_location = carla.Location(x=0, y=0, z=10)
         #start_location = carla.Location()
+        # TODO: Maybe these should be loaded from a file but honestly, this seems
+        #       simpler and requires not file reading
         spawn_point_157 = carla.Location(x=102.849, y=63.711, z=1.0)
         spawn_point_17 = carla.Location(x=102.849, y=66.711, z=0.02)
         location_1 = carla.Location(x=145.426, y=65.575, z=0.02)
@@ -102,9 +104,6 @@ class NearWarningScenario():
         #  Return to home then
         #  location_22 = carla.Location(x=, y=, z=0.02)
         # location_23 = carla.Location(x=, y=, z=0.02)
-
-
-
 
         #home_transform = carla.Transform(location=home_location, rotation=carla.Rotation())
         # point_2 = carla.Location()
@@ -260,15 +259,20 @@ class NearWarningScenario():
             else:
                 waypoints = agent._local_planner._waypoints_queue
                 # Check if the agent is turning
-                if len(waypoints) > 2:
+                if len(waypoints) > 4:
+                    # Check a few waypoints in front of the vehicle to better anticipate
                     wp1, wp2, wp3 = waypoints[0][0], waypoints[1][0], waypoints[2][0]
-                    if NearWarningScenario.is_turning(wp1, wp2, wp3, 10):
-                        #print("Approaching a turn, slowing down. %s", wp1)
+                    wp4, wp5, wp6 = waypoints[2][0], waypoints[3][0], waypoints[4][0]
+                    if (NearWarningScenario.is_turning(wp1, wp2, wp3, 20)
+                        or NearWarningScenario.is_turning(wp4, wp5, wp6, 20)):
+                        print("Approaching a turn, slowing down. %s", wp1)
                         agent.set_target_speed(20)  # Slow down for the turn
                     else:
+                        print("no turn")
                         agent.set_target_speed(50)
                         #print("not approaching turn ")
                 ego_vehicle.apply_control(agent.run_step())
+            
             #print("%s", ego_veh())
 
             # Use the below code section to stop automation 
