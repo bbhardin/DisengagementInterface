@@ -8,6 +8,7 @@ Autonomous Vehicles (AVs) and vehicles equipped with Advanced Driver Assistance 
 
 
 ## General Structure
+Notes for use on simulator: First start with `conda activate disengage`.
 
 app_play.py starts the scene and calls the python file related to running the desired town, i.e. town03_disengage_scenario.py
 
